@@ -39,8 +39,10 @@ ENV PATH="/home/node/.npm-global/bin:${PATH}"
 # Create directory and ensure ownership
 RUN mkdir -p /home/node/.npm-global && chown -R node:node /home/node/.npm-global
 
-# Also set npm config for any npm commands during build
-RUN npm config set prefix '/home/node/.npm-global'
+# Set npm config for persistent configuration
+RUN npm config set prefix '/home/node/.npm-global' && \
+    printf 'prefix=%s\n' '/home/node/.npm-global' > /home/node/.npmrc && \
+    chown node:node /home/node/.npmrc
 
 # Allow non-root user to write temp files during runtime/tests.
 RUN chown -R node:node /app
