@@ -21,6 +21,21 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
+# Detect host user UID/GID for container permissions
+if [[ $EUID -eq 0 ]]; then
+  CURRENT_USER="${SUDO_USER:-$USER}"
+  CURRENT_UID=$(id -u "$CURRENT_USER")
+  CURRENT_GID=$(id -g "$CURRENT_USER")
+else
+  CURRENT_UID=$EUID
+  CURRENT_GID=$(id -g)
+fi
+
+export PUID="${OPENCLAW_PUID:-$CURRENT_UID}"
+export PGID="${OPENCLAW_PGID:-$CURRENT_GID}"
+
+echo "==> Container user: uid=$PUID, gid=$PGID"
+
 OPENCLAW_CONFIG_DIR="${OPENCLAW_CONFIG_DIR:-$HOME/.openclaw}"
 OPENCLAW_WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$HOME/.openclaw/workspace}"
 
@@ -129,7 +144,7 @@ upsert_env() {
   local -a keys=("$@")
   local tmp
   tmp="$(mktemp)"
-  declare -A seen=()
+  local seen=""
 
   if [[ -f "$file" ]]; then
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -138,7 +153,7 @@ upsert_env() {
       for k in "${keys[@]}"; do
         if [[ "$key" == "$k" ]]; then
           printf '%s=%s\n' "$k" "${!k-}" >>"$tmp"
-          seen["$k"]=1
+          seen="${seen}:${k}:"
           replaced=true
           break
         fi
@@ -150,7 +165,7 @@ upsert_env() {
   fi
 
   for k in "${keys[@]}"; do
-    if [[ -z "${seen[$k]:-}" ]]; then
+    if [[ "$seen" != *":${k}:"* ]]; then
       printf '%s=%s\n' "$k" "${!k-}" >>"$tmp"
     fi
   done
@@ -168,7 +183,9 @@ upsert_env "$ENV_FILE" \
   OPENCLAW_IMAGE \
   OPENCLAW_EXTRA_MOUNTS \
   OPENCLAW_HOME_VOLUME \
-  OPENCLAW_DOCKER_APT_PACKAGES
+  OPENCLAW_DOCKER_APT_PACKAGES \
+  PUID \
+  PGID
 
 echo "==> Building Docker image: $IMAGE_NAME"
 docker build \

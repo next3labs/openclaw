@@ -16,6 +16,7 @@ services:
       - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
     init: true
     restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
     command:
       [
         "node",
@@ -44,3 +45,4 @@ services:
     tty: true
     init: true
     entrypoint: ["node", "dist/index.js"]
+    user: "${PUID:-1000}:${PGID:-1000}"

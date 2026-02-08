@@ -12,12 +12,17 @@ if [[ -f "$PROFILE_FILE" ]]; then
   PROFILE_MOUNT=(-v "$PROFILE_FILE":/home/node/.profile:ro)
 fi
 
+# Match container user to host user for permissions
+CURRENT_UID="${OPENCLAW_PUID:-$(id -u)}"
+CURRENT_GID="${OPENCLAW_PGID:-$(id -g)}"
+
 echo "==> Build image: $IMAGE_NAME"
 docker build -t "$IMAGE_NAME" -f "$ROOT_DIR/Dockerfile" "$ROOT_DIR"
 
 echo "==> Run live model tests (profile keys)"
 docker run --rm -t \
   --entrypoint bash \
+  --user "$CURRENT_UID:$CURRENT_GID" \
   -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
   -e HOME=/home/node \
   -e NODE_OPTIONS=--disable-warning=ExperimentalWarning \
