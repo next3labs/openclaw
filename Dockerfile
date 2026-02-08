@@ -31,6 +31,12 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
+# Configure npm global prefix for non-root user (allows skill installations)
+RUN mkdir -p /home/node/.npm-global && \
+    npm config set prefix '/home/node/.npm-global' && \
+    chown -R node:node /home/node/.npm-global
+ENV PATH="/home/node/.npm-global/bin:${PATH}"
+
 # Allow non-root user to write temp files during runtime/tests.
 RUN chown -R node:node /app
 
